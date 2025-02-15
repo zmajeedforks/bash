@@ -583,6 +583,8 @@ use_tempfile:
 #define RF_DEVSTDOUT	4
 #define RF_DEVTCP	5
 #define RF_DEVUDP	6
+#define RF_DEVUSTRM	7
+#define RF_DEVUDGRM	8
 
 /* A list of pattern/value pairs for filenames that the redirection
    code handles specially. */
@@ -599,6 +601,11 @@ static STRING_INT_ALIST _redir_special_filenames[] = {
   { "/dev/tcp/*/*", RF_DEVTCP },
   { "/dev/udp/*/*", RF_DEVUDP },
 #endif
+#if defined (UNIXSOCK_REDIRECTIONS)
+  { "/dev/unixstream/*", RF_DEVUSTRM },
+  { "/dev/unixdgram/*", RF_DEVUDGRM },
+#endif
+
   { (char *)NULL, -1 }
 };
 
@@ -656,6 +663,12 @@ redir_special_open (spec, filename, flags, mode, ri)
 #endif
       break;
 #endif /* NETWORK_REDIRECTIONS */
+
+#if defined (UNIXSOCK_REDIRECTIONS)
+    case RF_DEVUSTRM:
+    case RF_DEVUDGRM:
+      fd = usockopen (filename);
+#endif /* UNIXSOCK_REDIRECTIONS */
     }
 
   return fd;

@@ -1,0 +1,18 @@
+sock=/tmp/devunixtest.sock
+out=/tmp/devunixtest.out
+s=abcd.$$
+
+nc -U -l $sock >$out&
+sleep 1
+exec 9>/dev/unixstream$sock
+
+echo "$s" >&9
+exec 9>&-
+
+read t <$out
+
+if [[ $s != $t ]]; then
+  echo "out \"$s\" in \"$t\""
+fi
+
+rm $sock $out

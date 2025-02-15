@@ -1538,6 +1538,7 @@ tests/vredir6.sub	f
 tests/vredir7.sub	f
 tests/vredir8.sub	f
 tests/misc/dev-tcp.tests	f
+tests/misc/dev-unix.tests	f
 tests/misc/perf-script	f
 tests/misc/perftest	f
 tests/misc/read-nchars.tests	f

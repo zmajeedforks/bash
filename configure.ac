@@ -204,7 +204,7 @@ if test $opt_minimal_config = yes; then
 	opt_select=no opt_help=no opt_array_variables=no opt_dparen_arith=no
 	opt_brace_expansion=no opt_disabled_builtins=no opt_command_timing=no
 	opt_extended_glob=no opt_cond_command=no opt_arith_for_command=no
-	opt_net_redirs=no opt_progcomp=no opt_separate_help=no
+	opt_net_redirs=no opt_usock_redirs=no opt_progcomp=no opt_separate_help=no
 	opt_multibyte=yes opt_cond_regexp=no opt_coproc=no
 	opt_casemod_attrs=no opt_casemod_expansions=no opt_extglob_default=no
 	opt_translatable_strings=no
@@ -238,6 +238,7 @@ AC_ARG_ENABLE(history, AS_HELP_STRING([--enable-history], [turn on command histo
 AC_ARG_ENABLE(job-control, AS_HELP_STRING([--enable-job-control], [enable job control features]), opt_job_control=$enableval)
 AC_ARG_ENABLE(multibyte, AS_HELP_STRING([--enable-multibyte], [enable multibyte characters if OS supports them]), opt_multibyte=$enableval)
 AC_ARG_ENABLE(net-redirections, AS_HELP_STRING([--enable-net-redirections], [enable /dev/tcp/host/port redirection]), opt_net_redirs=$enableval)
+AC_ARG_ENABLE(usock-redirections, AC_HELP_STRING([--enable-usock-redirections], [enable /dev/unixstream/path redirection]), opt_usock_redirs=$enableval)
 AC_ARG_ENABLE(process-substitution, AS_HELP_STRING([--enable-process-substitution], [enable process substitution]), opt_process_subst=$enableval)
 AC_ARG_ENABLE(progcomp, AS_HELP_STRING([--enable-progcomp], [enable programmable completion and the complete builtin]), opt_progcomp=$enableval)
 AC_ARG_ENABLE(prompt-string-decoding, AS_HELP_STRING([--enable-prompt-string-decoding], [turn on escape character decoding in prompts]), opt_prompt_decoding=$enableval)
@@ -332,6 +333,9 @@ AC_DEFINE(ARITH_FOR_COMMAND)
 fi
 if test $opt_net_redirs = yes; then
 AC_DEFINE(NETWORK_REDIRECTIONS)
+fi
+if test $opt_usock_redirs = yes; then
+AC_DEFINE(UNIXSOCK_REDIRECTIONS)
 fi
 if test $opt_progcomp = yes; then
 AC_DEFINE(PROGRAMMABLE_COMPLETION)
@@ -778,7 +782,7 @@ AC_CHECK_HEADERS(unistd.h stdlib.h stdarg.h varargs.h limits.h string.h \
 		 stdbool.h stddef.h stdint.h netdb.h pwd.h grp.h strings.h \
 		 regex.h syslog.h ulimit.h)
 AC_CHECK_HEADERS(sys/pte.h sys/stream.h sys/select.h sys/file.h sys/ioctl.h \
-		 sys/mman.h sys/param.h sys/random.h sys/socket.h sys/stat.h \
+		 sys/mman.h sys/param.h sys/random.h sys/socket.h sys/un.h sys/stat.h \
 		 sys/time.h sys/times.h sys/types.h sys/wait.h)
 AC_CHECK_HEADERS(netinet/in.h arpa/inet.h)
 

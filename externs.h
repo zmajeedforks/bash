@@ -281,6 +281,9 @@ extern int isnetconn PARAMS((int));
 /* declarations for functions defined in lib/sh/netopen.c */
 extern int netopen PARAMS((char *));
 
+/* declarations for functions defined in lib/sh/usockopen.c */
+extern int usockopen __P((char *));
+
 /* Declarations for  functions defined in lib/sh/oslib.c */
 
 #if !defined (HAVE_DUP2) || defined (DUP2_BROKEN)

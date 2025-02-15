@@ -85,7 +85,7 @@ LIBRARY_NAME = libsh.a
 CSOURCES = clktck.c clock.c getcwd.c getenv.c oslib.c setlinebuf.c \
 	   strcasecmp.c strerror.c strtod.c strtol.c strtoul.c \
 	   vprint.c itos.c rename.c zread.c zwrite.c shtty.c \
-	   inet_aton.c netconn.c netopen.c strpbrk.c timeval.c makepath.c \
+	   inet_aton.c netconn.c netopen.c usockopen.c strpbrk.c timeval.c makepath.c \
 	   pathcanon.c pathphys.c tmpfile.c stringlist.c stringvec.c spell.c \
 	   shquote.c strtrans.c strcasestr.c snprintf.c mailstat.c \
 	   fmtulong.c fmtullong.c fmtumax.c shmatch.c strnlen.c \
@@ -103,7 +103,7 @@ HSOURCES =
 LIBOBJS = @LIBOBJS@
 OBJECTS = clktck.o clock.o getenv.o oslib.o setlinebuf.o strnlen.o \
 	  itos.o zread.o zwrite.o shtty.o shmatch.o eaccess.o \
-	  netconn.o netopen.o timeval.o makepath.o pathcanon.o \
+	  netconn.o netopen.o usockopen.o timeval.o makepath.o pathcanon.o \
 	  pathphys.o tmpfile.o stringlist.o stringvec.o spell.o shquote.o \
 	  strtrans.o snprintf.o mailstat.o fmtulong.o \
 	  fmtullong.o fmtumax.o zcatfd.o zmapfd.o winsize.o wcsdup.o \
@@ -169,6 +169,7 @@ memset.o: memset.c
 mktime.o: mktime.c
 netconn.o: netconn.c
 netopen.o: netopen.c
+usockopen.o: usockopen.c
 oslib.o: oslib.c
 pathcanon.o: pathcanon.c
 pathphys.o: pathphys.c
@@ -251,6 +252,7 @@ memset.o: ${BUILD_DIR}/config.h
 mktime.o: ${BUILD_DIR}/config.h
 netconn.o: ${BUILD_DIR}/config.h
 netopen.o: ${BUILD_DIR}/config.h
+usockopen.o: ${BUILD_DIR}/config.h
 oslib.o: ${BUILD_DIR}/config.h
 pathcanon.o: ${BUILD_DIR}/config.h
 pathphys.o: ${BUILD_DIR}/config.h
@@ -352,6 +354,8 @@ netopen.o: ${topdir}/make_cmd.h ${topdir}/subst.h ${topdir}/sig.h
 netopen.o: ${BUILD_DIR}/pathnames.h ${topdir}/externs.h
 netopen.o: ${topdir}/bashintl.h ${LIBINTL_H} $(BASHINCDIR)/gettext.h
 #netopen.o: ${BUILD_DIR}/version.h
+
+usockopen.o: ${topdir}/bashansi.h ${topdir}/bashintl.h
 
 oslib.o: ${topdir}/bashtypes.h ${topdir}/bashansi.h ${BASHINCDIR}/maxpath.h
 oslib.o: ${topdir}/shell.h ${topdir}/syntax.h ${topdir}/bashjmp.h ${BASHINCDIR}/posixjmp.h

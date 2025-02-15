@@ -142,6 +142,10 @@
    socket connections when used in redirections */
 #undef NETWORK_REDIRECTIONS
 
+/* Define UNIXSOCK_REDIRECTIONS if you want /dev/(unixstream|unixdgram)/path to open
+   socket connections when used in redirections */
+#undef UNIXSOCK_REDIRECTIONS
+
 /* Define PROGRAMMABLE_COMPLETION for the programmable completion features
    and the complete builtin. */
 #undef PROGRAMMABLE_COMPLETION
@@ -1072,6 +1076,9 @@
 
 /* Define if you have the <sys/socket.h> header file.  */
 #undef HAVE_SYS_SOCKET_H
+
+/* Define if you have the <sys/un.h> header file.  */
+#undef HAVE_SYS_UN_H
 
 /* Define if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
