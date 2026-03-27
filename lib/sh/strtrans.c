@@ -1,6 +1,6 @@
 /* strtrans.c - Translate and untranslate strings with ANSI-C escape sequences. */
 
-/* Copyright (C) 2000-2015 Free Software Foundation, Inc.
+/* Copyright (C) 2000-2015,2022-2023 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -45,26 +45,25 @@
    that we're translating a string for `echo -e', and therefore should not
    treat a single quote as a character that may be escaped with a backslash.
    If (FLAGS&2) is non-zero, we're expanding for the parser and want to
-   quote CTLESC and CTLNUL with CTLESC.  If (flags&4) is non-zero, we want
+   quote CTLESC and CTLNUL with CTLESC.  If (FLAGS&4) is non-zero, we want
    to remove the backslash before any unrecognized escape sequence. */
 char *
-ansicstr (string, len, flags, sawc, rlen)
-     char *string;
-     int len, flags, *sawc, *rlen;
+ansicstr (const char *string, size_t len, int flags, int *sawc, size_t *rlen)
 {
   int c, temp;
-  char *ret, *r, *s;
+  char *ret, *r;
+  const char *s;
   unsigned long v;
   size_t clen;
-  int b, mb_cur_max;
+  size_t mb_cur_max;
 #if defined (HANDLE_MULTIBYTE)
   wchar_t wc;
 #endif
 
   if (string == 0 || *string == '\0')
-    return ((char *)NULL);
+    return ((char *)0);
 
-  mb_cur_max = MB_CUR_MAX;
+  mb_cur_max = locale_mb_cur_max;
 #if defined (HANDLE_MULTIBYTE)
   temp = 4*len + 4;
   if (temp < 12)
@@ -80,10 +79,14 @@ ansicstr (string, len, flags, sawc, rlen)
 	{
 	  clen = 1;
 #if defined (HANDLE_MULTIBYTE)
-	  if ((locale_utf8locale && (c & 0x80)) ||
-	      (locale_utf8locale == 0 && mb_cur_max > 0 && is_basic (c) == 0))
+	  /* We read an entire multibyte character at a time if we are in a
+	     locale where a backslash can possibly appear as part of a
+	     multibyte character. UTF-8 encodings prohibit this. */
+	  if (locale_utf8locale == 0 && mb_cur_max > 1 && is_basic (c) == 0)
 	    {
 	      clen = mbrtowc (&wc, s - 1, mb_cur_max, 0);
+	      if (MB_NULLWCH (clen))
+		break;			/* it apparently can happen */
 	      if (MB_INVALIDCH (clen))
 		clen = 1;
 	    }
@@ -96,13 +99,8 @@ ansicstr (string, len, flags, sawc, rlen)
 	{
 	  switch (c = *s++)
 	    {
-#if defined (__STDC__)
 	    case 'a': c = '\a'; break;
 	    case 'v': c = '\v'; break;
-#else
-	    case 'a': c = (int) 0x07; break;
-	    case 'v': c = (int) 0x0B; break;
-#endif
 	    case 'b': c = '\b'; break;
 	    case 'e': case 'E':		/* ESC -- non-ANSI */
 	      c = ESC; break;
@@ -204,7 +202,9 @@ ansicstr (string, len, flags, sawc, rlen)
 		  s++;
 		  if ((flags & 2) && c == '\\' && c == *s)
 		    s++;	/* Posix requires $'\c\\' do backslash escaping */
-		  c = TOCTRL(c);
+		  else if ((flags & 2) && c == CTLESC && (*s == CTLESC || *s == CTLNUL))
+		    c = *s++;
+ 		  c = TOCTRL(c);
 		  break;
 		}
 		/*FALLTHROUGH*/
@@ -227,45 +227,33 @@ ansicstr (string, len, flags, sawc, rlen)
 /* Take a string STR, possibly containing non-printing characters, and turn it
    into a $'...' ANSI-C style quoted string.  Returns a new string. */
 char *
-ansic_quote (str, flags, rlen)
-     char *str;
-     int flags, *rlen;
+ansic_quote (const char *str, int flags, int *rlen)
 {
-  char *r, *ret, *s;
-  int l, rsize;
+  char *r, *ret;
+  const char  *s;
   unsigned char c;
+#if defined (HANDLE_MULTIBYTE)
   size_t clen;
   int b;
-#if defined (HANDLE_MULTIBYTE)
   wchar_t wc;
+  DECLARE_MBSTATE;
 #endif
 
   if (str == 0 || *str == 0)
     return ((char *)0);
 
-  l = strlen (str);
-  rsize = 4 * l + 4;
-  r = ret = (char *)xmalloc (rsize);
+  r = ret = (char *)xmalloc (4 * strlen (str) + 4);
 
   *r++ = '$';
   *r++ = '\'';
 
   for (s = str; c = *s; s++)
     {
-      b = l = 1;		/* 1 == add backslash; 0 == no backslash */
-      clen = 1;
-
       switch (c)
 	{
 	case ESC: c = 'E'; break;
-#ifdef __STDC__
 	case '\a': c = 'a'; break;
 	case '\v': c = 'v'; break;
-#else
-	case 0x07: c = 'a'; break;
-	case 0x0b: c = 'v'; break;
-#endif
-
 	case '\b': c = 'b'; break;
 	case '\f': c = 'f'; break;
 	case '\n': c = 'n'; break;
@@ -276,39 +264,42 @@ ansic_quote (str, flags, rlen)
 	  break;
 	default:
 #if defined (HANDLE_MULTIBYTE)
-	  b = is_basic (c);
-	  /* XXX - clen comparison to 0 is dicey */
-	  if ((b == 0 && ((clen = mbrtowc (&wc, s, MB_CUR_MAX, 0)) < 0 || MB_INVALIDCH (clen) || iswprint (wc) == 0)) ||
-	      (b == 1 && ISPRINT (c) == 0))
-#else
-	  if (ISPRINT (c) == 0)
-#endif
+	  if ((locale_utf8locale && (c & 0x80)) ||
+	      (locale_utf8locale == 0 && locale_mb_cur_max > 1 && is_basic (c) == 0))
 	    {
-	      *r++ = '\\';
-	      *r++ = TOCHAR ((c >> 6) & 07);
-	      *r++ = TOCHAR ((c >> 3) & 07);
-	      *r++ = TOCHAR (c & 07);
-	      continue;
+	      clen = mbrtowc (&wc, s, locale_mb_cur_max, &state);
+	      if (MB_NULLWCH (clen))
+		goto quote_end;
+	      if (MB_INVALIDCH (clen))
+		INITIALIZE_MBSTATE;
+	      else if (iswprint (wc))
+		{
+		  for (b = 0; b < (int)clen; b++)
+		    *r++ = (unsigned char)s[b];
+		  s += clen - 1;	/* -1 because of the increment above */
+		  continue;
+		}
 	    }
-	  l = 0;
-	  break;
-	}
-      if (b == 0 && clen == 0)
-	break;
+	  else
+#endif
+	    if (ISPRINT (c))
+	      {
+		*r++ = c;
+		continue;
+	      }
 
-      if (l)
-	*r++ = '\\';
-
-      if (clen == 1)
-	*r++ = c;
-      else
-	{
-	  for (b = 0; b < (int)clen; b++)
-	    *r++ = (unsigned char)s[b];
-	  s += clen - 1;	/* -1 because of the increment above */
+	  *r++ = '\\';
+	  *r++ = TOCHAR ((c >> 6) & 07);
+	  *r++ = TOCHAR ((c >> 3) & 07);
+	  *r++ = TOCHAR (c & 07);
+	  continue;
 	}
+
+      *r++ = '\\';
+      *r++ = c;
     }
 
+quote_end:
   *r++ = '\'';
   *r = '\0';
   if (rlen)
@@ -318,8 +309,7 @@ ansic_quote (str, flags, rlen)
 
 #if defined (HANDLE_MULTIBYTE)
 int
-ansic_wshouldquote (string)
-     const char *string;
+ansic_wshouldquote (const char *string)
 {
   const wchar_t *wcs;
   wchar_t wcc;
@@ -348,8 +338,7 @@ ansic_wshouldquote (string)
 
 /* return 1 if we need to quote with $'...' because of non-printing chars. */
 int
-ansic_shouldquote (string)
-     const char *string;
+ansic_shouldquote (const char *string)
 {
   const char *s;
   unsigned char c;
@@ -360,7 +349,8 @@ ansic_shouldquote (string)
   for (s = string; c = *s; s++)
     {
 #if defined (HANDLE_MULTIBYTE)
-      if (is_basic (c) == 0)
+      if ((locale_utf8locale && (c & 0x80)) ||
+	  (locale_utf8locale == 0 && locale_mb_cur_max > 1 && is_basic (c) == 0))
 	return (ansic_wshouldquote (s));
 #endif
       if (ISPRINT (c) == 0)
@@ -373,12 +363,11 @@ ansic_shouldquote (string)
 /* $'...' ANSI-C expand the portion of STRING between START and END and
    return the result.  The result cannot be longer than the input string. */
 char *
-ansiexpand (string, start, end, lenp)
-     char *string;
-     int start, end, *lenp;
+ansiexpand (const char *string, int start, int end, size_t *lenp)
 {
   char *temp, *t;
-  int len, tlen;
+  int len;
+  size_t tlen;
 
   temp = (char *)xmalloc (end - start + 1);
   for (tlen = 0, len = start; len < end; )
